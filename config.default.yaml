@@ -1,0 +1,40 @@
+schema_version: 1
+
+inference:
+  provider: ollama
+  base_url: http://127.0.0.1:11434
+  model_id: null
+  context_tokens: 8192
+  request_timeout_seconds: 120
+  cloud_fallback: false
+  require_local_execution: true
+
+execution:
+  max_active_tasks: 1
+  max_steps: 40
+  max_active_seconds: 600
+  tool_timeout_seconds: 15
+  max_read_retries: 2
+  max_no_progress_steps: 3
+  desktop_adapter: windows_uia
+  visual_fallback_enabled: false
+
+permissions:
+  read_roots: []
+  write_roots: []
+  allowed_apps: []
+  allowed_origins: []
+  permanent_delete_enabled: false
+  arbitrary_shell_enabled: false
+
+network:
+  mode: offline
+  bind_host: 127.0.0.1
+  bind_port: 0
+  external_integration_enabled: false
+
+privacy:
+  telemetry_enabled: false
+  persist_screenshots: false
+  log_full_document_contents: false
+  history_retention_days: 30

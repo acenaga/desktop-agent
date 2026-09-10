@@ -1,0 +1,40 @@
+# Entornos virtuales de Python
+.venv/
+env/
+venv/
+ENV/
+
+# Bytecode y caches de Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Almacenamiento local SQLite y logs
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.log
+
+# Node.js y Frontend
+node_modules/
+apps/desktop/node_modules/
+apps/desktop/dist/
+apps/desktop/.vite/
+
+# Tauri y Rust
+apps/desktop/src-tauri/target/
+
+# SO y Editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
