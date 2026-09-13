@@ -38,3 +38,8 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# Variables de entorno locales (pueden contener el token de sesión)
+.env
+.env.local
+.env.*.local

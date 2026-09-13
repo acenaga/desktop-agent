@@ -31,8 +31,13 @@ export const App: React.FC = () => {
 
   // Inicialización
   useEffect(() => {
-    // Configuración inicial de API local
-    setApiConfig("http://127.0.0.1:8000", "");
+    // Configuración inicial de API local. El token debe coincidir con el de
+    // `local_agent.cli serve --token ...`; se define en apps/desktop/.env.local
+    // (ver .env.example). Sin él, todas las rutas /v1 responden 401.
+    setApiConfig(
+      import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000",
+      import.meta.env.VITE_API_TOKEN ?? ""
+    );
 
     loadInitialData();
 

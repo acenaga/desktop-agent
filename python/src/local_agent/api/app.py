@@ -41,14 +41,16 @@ def create_app(core: Optional[AgentCore] = None) -> FastAPI:
     )
 
     # Configuración restrictiva de CORS (Sección 10: cerrado, solo orígenes locales autorizados)
+    # Starlette compara allow_origins literalmente (no admite comodines de puerto
+    # como "http://localhost:*"), así que los orígenes loopback con cualquier
+    # puerto (p. ej. Vite en :5173) se autorizan mediante una regex anclada.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[
-            "http://127.0.0.1:*",
-            "http://localhost:*",
             "tauri://localhost",
             "https://tauri.localhost",
         ],
+        allow_origin_regex=r"^http://(127\.0\.0\.1|localhost)(:\d{1,5})?$",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
