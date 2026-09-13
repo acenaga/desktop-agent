@@ -69,6 +69,11 @@ class CreateScopeRequest(BaseModel):
     allowed_domains: List[str] = Field(default_factory=list)
 
 
+class UpdateScopeRootsRequest(BaseModel):
+    read_roots: List[str] = Field(default_factory=list)
+    write_roots: List[str] = Field(default_factory=list)
+
+
 class PreferenceRequest(BaseModel):
     key: str
     value: Any

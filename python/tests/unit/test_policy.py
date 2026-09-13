@@ -148,3 +148,41 @@ def test_unauthorized_app_blocked(temp_workspace):
             scope,
         )
     assert exc_info.value.code == "APP_NOT_ALLOWED"
+
+
+def test_validate_authorized_root_returns_canonical_path(tmp_path):
+    policy = PolicyEngine()
+    folder = tmp_path / "carpeta"
+    folder.mkdir()
+
+    assert policy.validate_authorized_root(f"  {folder}  ") == str(folder.resolve())
+
+
+@pytest.mark.parametrize(
+    "raw, expected_code",
+    [
+        ("", "INVALID_PATH"),
+        ("   ", "INVALID_PATH"),
+        ("carpeta_relativa", "INVALID_PATH"),
+        (r"\\servidor\recurso", "UNC_PATH_FORBIDDEN"),
+        ("//servidor/recurso", "UNC_PATH_FORBIDDEN"),
+    ],
+    ids=["vacia", "espacios", "relativa", "unc_barra_invertida", "unc_barra"],
+)
+def test_validate_authorized_root_rejects_invalid_paths(raw, expected_code):
+    policy = PolicyEngine()
+
+    with pytest.raises(PolicyViolation) as exc_info:
+        policy.validate_authorized_root(raw)
+    assert exc_info.value.code == expected_code
+
+
+def test_validate_authorized_root_rejects_missing_or_file(tmp_path):
+    policy = PolicyEngine()
+    archivo = tmp_path / "archivo.txt"
+    archivo.write_text("x")
+
+    for raw in (str(tmp_path / "no_existe"), str(archivo)):
+        with pytest.raises(PolicyViolation) as exc_info:
+            policy.validate_authorized_root(raw)
+        assert exc_info.value.code == "ROOT_NOT_FOUND"

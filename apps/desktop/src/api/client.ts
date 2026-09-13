@@ -63,6 +63,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+  updateScopeRoots: (scopeId: string, data: { read_roots: string[]; write_roots: string[] }) =>
+    request<TaskScope>(`/v1/scopes/${encodeURIComponent(scopeId)}/roots`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
   getPreferences: () => request<Record<string, any>>("/v1/preferences"),
   setPreference: (key: string, value: any) =>
     request("/v1/preferences", {

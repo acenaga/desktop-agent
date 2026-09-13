@@ -49,6 +49,36 @@ class PolicyEngine:
                 code="TOOL_FORBIDDEN",
             )
 
+    def validate_authorized_root(self, raw: str) -> str:
+        """
+        Valida una carpeta que se va a autorizar como raíz de lectura o escritura.
+        Debe ser una ruta absoluta local (no UNC) a un directorio existente.
+        Devuelve la ruta canónica, la misma forma con la que canonicalize_path
+        compara la contención.
+        """
+        if not raw or not raw.strip():
+            raise PolicyViolation("Ruta de carpeta vacía no permitida.", code="INVALID_PATH")
+
+        norm = raw.strip()
+        if norm.startswith(r"\\") or norm.startswith("//"):
+            raise PolicyViolation(
+                f"Rutas UNC y de red no están permitidas: '{norm}'.", code="UNC_PATH_FORBIDDEN"
+            )
+
+        path = Path(norm)
+        if not path.is_absolute():
+            raise PolicyViolation(
+                f"La carpeta debe ser una ruta absoluta: '{norm}'.", code="INVALID_PATH"
+            )
+
+        resolved = path.resolve()
+        if not resolved.exists():
+            raise PolicyViolation(f"La carpeta no existe: '{norm}'.", code="ROOT_NOT_FOUND")
+        if not resolved.is_dir():
+            raise PolicyViolation(f"La ruta no es una carpeta: '{norm}'.", code="ROOT_NOT_FOUND")
+
+        return str(resolved)
+
     def canonicalize_path(
         self,
         raw_path: str,

@@ -132,6 +132,16 @@ export const App: React.FC = () => {
     }).catch(console.error);
   };
 
+  const handleUpdateScopeRoots = async (
+    scopeId: string,
+    data: { read_roots: string[]; write_roots: string[] }
+  ): Promise<TaskScope> => {
+    const saved = await api.updateScopeRoots(scopeId, data);
+    // Reemplazar en el estado para que TaskNewView vea las carpetas nuevas sin recargar
+    setScopes((prev) => prev.map((s) => (s.scope_id === saved.scope_id ? saved : s)));
+    return saved;
+  };
+
   const handleCreateTask = async (data: {
     instruction: string;
     scope_id: string;
@@ -206,6 +216,7 @@ export const App: React.FC = () => {
             scopes={scopes}
             onRefreshModels={loadInitialData}
             onSavePreference={(k, v) => api.setPreference(k, v)}
+            onUpdateScopeRoots={handleUpdateScopeRoots}
           />
         )}
       </main>

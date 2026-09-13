@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { HealthStatus, ModelItem, TaskScope } from "../types";
 
 interface SettingsViewProps {
@@ -7,6 +7,10 @@ interface SettingsViewProps {
   scopes: TaskScope[];
   onRefreshModels: () => void;
   onSavePreference: (key: string, value: any) => void;
+  onUpdateScopeRoots: (
+    scopeId: string,
+    data: { read_roots: string[]; write_roots: string[] }
+  ) => Promise<TaskScope>;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -15,6 +19,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   scopes,
   onRefreshModels,
   onSavePreference,
+  onUpdateScopeRoots,
 }) => {
   const [selectedModel, setSelectedModel] = useState(health?.model_id || "");
   const [retentionDays, setRetentionDays] = useState(30);
@@ -99,14 +104,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <h3>Alcances y Carpetas Autorizadas</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             {scopes.map((s) => (
-              <div key={s.scope_id} style={{ padding: "12px", background: "var(--bg-primary)", borderRadius: "6px" }}>
-                <strong>{s.name}</strong>
-                <div style={{ fontSize: "13px", marginTop: "4px" }}>
-                  <div>Lectura: {s.read_roots.join(", ") || "(Ninguna)"}</div>
-                  <div>Escritura: {s.write_roots.join(", ") || "(Ninguna)"}</div>
-                  <div>Apps: {s.allowed_apps.join(", ") || "Todas"}</div>
-                </div>
-              </div>
+              <ScopeRootsEditor key={s.scope_id} scope={s} onSave={onUpdateScopeRoots} />
             ))}
           </div>
         </div>
@@ -133,6 +131,117 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+};
+
+// Una ruta por línea, igual que las referencias de entrada en TaskNewView
+const parseRoots = (text: string): string[] =>
+  text
+    .split("\n")
+    .map((r) => r.trim())
+    .filter((r) => r.length > 0);
+
+interface ScopeRootsEditorProps {
+  scope: TaskScope;
+  onSave: SettingsViewProps["onUpdateScopeRoots"];
+}
+
+const ScopeRootsEditor: React.FC<ScopeRootsEditorProps> = ({ scope, onSave }) => {
+  const [readText, setReadText] = useState(scope.read_roots.join("\n"));
+  const [writeText, setWriteText] = useState(scope.write_roots.join("\n"));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [savedVersion, setSavedVersion] = useState<number | null>(null);
+
+  // Al guardar, el backend devuelve rutas canónicas y una versión nueva: reflejarlas
+  useEffect(() => {
+    setReadText(scope.read_roots.join("\n"));
+    setWriteText(scope.write_roots.join("\n"));
+  }, [scope.scope_id, scope.version]);
+
+  const readRoots = parseRoots(readText);
+  const writeRoots = parseRoots(writeText);
+  const isDirty =
+    readRoots.join("\n") !== scope.read_roots.join("\n") ||
+    writeRoots.join("\n") !== scope.write_roots.join("\n");
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+    setSavedVersion(null);
+    try {
+      const saved = await onSave(scope.scope_id, { read_roots: readRoots, write_roots: writeRoots });
+      setSavedVersion(saved.version);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDiscard = () => {
+    setReadText(scope.read_roots.join("\n"));
+    setWriteText(scope.write_roots.join("\n"));
+    setError(null);
+    setSavedVersion(null);
+  };
+
+  const textareaStyle: React.CSSProperties = { width: "100%", fontFamily: "monospace", fontSize: "13px" };
+
+  return (
+    <div style={{ padding: "12px", background: "var(--bg-primary)", borderRadius: "6px" }}>
+      <strong>{scope.name}</strong>
+      <span style={{ fontSize: "12px", color: "var(--text-secondary)", marginLeft: "8px" }}>versión {scope.version}</span>
+
+      <p style={{ fontSize: "12px", color: "var(--text-secondary)", margin: "6px 0 10px 0" }}>
+        Una carpeta por línea. Deben ser rutas absolutas y existentes, por ejemplo{" "}
+        <code>C:\Users\usuario\Documentos\proyecto</code>. Los cambios aplican a las tareas nuevas.
+      </p>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+        <label style={{ fontSize: "13px" }}>
+          <span style={{ display: "block", fontWeight: "bold", marginBottom: "4px" }}>Carpetas de lectura</span>
+          <textarea
+            rows={3}
+            value={readText}
+            onChange={(e) => {
+              setReadText(e.target.value);
+              setSavedVersion(null);
+            }}
+            style={textareaStyle}
+            disabled={saving}
+          />
+        </label>
+        <label style={{ fontSize: "13px" }}>
+          <span style={{ display: "block", fontWeight: "bold", marginBottom: "4px" }}>Carpetas de escritura</span>
+          <textarea
+            rows={3}
+            value={writeText}
+            onChange={(e) => {
+              setWriteText(e.target.value);
+              setSavedVersion(null);
+            }}
+            style={textareaStyle}
+            disabled={saving}
+          />
+        </label>
+      </div>
+
+      <div style={{ fontSize: "13px", marginTop: "8px" }}>Apps: {scope.allowed_apps.join(", ") || "Todas"}</div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "10px" }}>
+        <button className="btn-primary" onClick={handleSave} disabled={!isDirty || saving}>
+          {saving ? "Guardando..." : "Guardar carpetas"}
+        </button>
+        <button className="btn-secondary" onClick={handleDiscard} disabled={!isDirty || saving}>
+          Descartar
+        </button>
+        {error && <span style={{ fontSize: "13px", color: "var(--warning)" }}>{error}</span>}
+        {savedVersion !== null && !error && (
+          <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>✅ Guardado (versión {savedVersion})</span>
+        )}
       </div>
     </div>
   );

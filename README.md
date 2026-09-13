@@ -129,6 +129,8 @@ npm run dev
 ```
 Abre en el navegador `http://localhost:5173` para interactuar con la interfaz completa (Inicio, Ejecución en tiempo real con SSE, Historial y Configuración).
 
+Las **carpetas de lectura y escritura** del agente se configuran en *Configuración → Alcances y Carpetas Autorizadas* (una ruta absoluta y existente por línea). La sección `permissions` del YAML solo se usa para crear el alcance por defecto en el primer arranque; después manda lo guardado desde la interfaz.
+
 ### 5.3 Ejecución Directa por Línea de Comandos (CLI)
 ```bash
 # Generar fixtures de prueba si no existen

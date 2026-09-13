@@ -12,6 +12,7 @@ from fastapi.responses import StreamingResponse
 from local_agent.domain.models import Task, TaskScope, new_id, now_utc_iso
 from local_agent.domain.states import TaskState
 from local_agent.core.engine import AgentCore
+from local_agent.policy.engine import PolicyViolation
 from .auth import verify_bearer_token
 from .schemas import (
     HealthResponse,
@@ -22,6 +23,7 @@ from .schemas import (
     TaskDetailResponse,
     ApprovalResolutionRequest,
     CreateScopeRequest,
+    UpdateScopeRootsRequest,
     PreferenceRequest,
 )
 
@@ -268,6 +270,45 @@ async def create_scope(
     )
     saved = await core.scope_repo.save_scope(scope)
     return saved
+
+
+@router.put("/scopes/{scope_id}/roots")
+async def update_scope_roots(
+    scope_id: str,
+    req: UpdateScopeRootsRequest,
+    core: AgentCore = Depends(get_core),
+    _: str = Depends(verify_bearer_token),
+):
+    existing = await core.scope_repo.get_scope(scope_id)
+    if not existing:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"El scope_id '{scope_id}' no existe.",
+        )
+
+    def canonical_unique(raw_roots: List[str]) -> List[str]:
+        roots: List[str] = []
+        for raw in raw_roots:
+            root = core.policy_engine.validate_authorized_root(raw)
+            if root not in roots:
+                roots.append(root)
+        return roots
+
+    try:
+        read_roots = canonical_unique(req.read_roots)
+        write_roots = canonical_unique(req.write_roots)
+    except PolicyViolation as pv:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=pv.message)
+
+    # Nueva versión: las acciones y aprobaciones registran scope_version
+    updated = existing.model_copy(
+        update={
+            "read_roots": read_roots,
+            "write_roots": write_roots,
+            "version": existing.version + 1,
+        }
+    )
+    return await core.scope_repo.save_scope(updated)
 
 
 @router.get("/preferences")
