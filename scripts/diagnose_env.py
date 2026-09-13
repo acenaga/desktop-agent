@@ -6,7 +6,7 @@ Inspecciona:
 - Python, Node.js, npm, Rust/Cargo
 - Memoria RAM y procesador
 - Disponibilidad y modelos de Ollama
-- Soporte para Playwright y pywinauto
+- Soporte para Playwright (incluida la descarga real del navegador) y pywinauto
 """
 
 import sys
@@ -74,6 +74,34 @@ def check_ollama(base_url="http://127.0.0.1:11434"):
         report["error"] = str(e)
     return report
 
+def check_playwright_chromium():
+    """
+    Comprueba que el navegador de Playwright esté realmente utilizable.
+    Instalar el paquete 'playwright' con pip NO descarga los binarios del
+    navegador, así que aquí se lanza Chromium headless y se cierra: es la
+    única verificación equivalente a lo que hacen BrowserAdapter y la
+    prueba UC-03 (headless usa 'chrome-headless-shell', un binario distinto
+    del Chromium completo que reporta executable_path).
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        return "no aplicable (paquete playwright no instalado)"
+
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            try:
+                return f"disponible (Chromium {browser.version})"
+            finally:
+                browser.close()
+    except Exception as e:
+        detalle = str(e).splitlines()[0]
+        return (
+            f"NO utilizable -> ejecuta 'playwright install chromium'. Detalle: {detalle}"
+        )
+
+
 def check_tools():
     tools = {}
     ok_node, out_node = check_cmd(["node", "--version"])
@@ -90,6 +118,8 @@ def check_tools():
         tools["playwright_python"] = playwright.__file__
     except ImportError:
         tools["playwright_python"] = "no instalado en este entorno"
+
+    tools["playwright_chromium"] = check_playwright_chromium()
 
     try:
         import pywinauto

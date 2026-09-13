@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from fixtures.uc03.server import LocalFormServer, RECEIVED_SUBMISSIONS
 from local_agent.config import AppConfig
 from local_agent.domain.models import Task, TaskScope, TaskProposal
-from local_agent.domain.states import TaskState
+from local_agent.domain.states import TaskState, ActionState
 from local_agent.policy.engine import PolicyEngine
 from local_agent.providers.base import ModelResponse
 from local_agent.providers.fake import FakeModelProvider
@@ -156,6 +156,17 @@ async def test_uc03_browser_form_submission(tmp_path, local_server):
     try:
         completed = await core.execute_task(task.task_id)
         assert completed.state == TaskState.COMPLETED
+
+        # Ninguna acción del navegador debe haber fallado. El estado final de la
+        # tarea lo determina el guion del proveedor simulado, no el éxito real de
+        # las herramientas, así que revisamos las acciones para obtener el error
+        # concreto (p. ej. Chromium sin instalar) en lugar de un "recibidos: 0".
+        actions = await action_repo.get_actions_for_task(task.task_id)
+        failed = [a for a in actions if a.state == ActionState.FAILED]
+        assert not failed, (
+            f"{len(failed)} de {len(actions)} acciones fallaron. "
+            f"Primer fallo -> {failed[0].tool}: {failed[0].error}"
+        )
 
         # Verificación independiente en el servidor HTTP
         assert len(RECEIVED_SUBMISSIONS) == 1, f"Se esperaba 1 envío en el servidor, recibidos: {len(RECEIVED_SUBMISSIONS)}"

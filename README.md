@@ -66,6 +66,11 @@ source .venv/bin/activate  # En Windows: .venv\Scripts\activate
 # Instalar dependencias
 pip install -r python/requirements.txt
 
+# Instalar el paquete local_agent en modo editable (necesario para
+# `python -m local_agent.cli`; sin este paso aparece
+# "ModuleNotFoundError: No module named 'local_agent'")
+pip install -e python
+
 # Instalar navegador para Playwright
 playwright install chromium
 ```
@@ -93,6 +98,18 @@ Ejecuta la suite completa de 22 pruebas (seguridad, persistencia, ciclo ReAct, U
 ```bash
 pytest python/tests
 ```
+
+> **Nota:** la prueba UC-03 lanza un navegador real, por lo que requiere que el
+> binario de Chromium esté descargado (paso `playwright install chromium` de la
+> sección 3.1). Instalar `playwright` con `pip` **no** descarga el navegador. Si
+> falta, la prueba falla con `BrowserType.launch: Executable doesn't exist at ...`;
+> basta con ejecutar:
+>
+> ```bash
+> playwright install chromium
+> ```
+>
+> Este paso también debe repetirse en cualquier máquina nueva o entorno de CI.
 
 ---
 

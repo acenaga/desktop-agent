@@ -113,6 +113,11 @@ class ToolExecutor:
                 error=f"Excepción no controlada en herramienta '{tool_name}': {str(e)}",
             )
 
+        # Si la herramienta ya reportó un fallo, conservamos su error original:
+        # es más informativo que el mensaje genérico de postcondición.
+        if not result.success:
+            return result
+
         # Verificación de postcondición independiente
         try:
             verified = await tool.verify_postcondition(canonical_args, result)
